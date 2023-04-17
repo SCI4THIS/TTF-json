@@ -318,30 +318,168 @@ function parseLocaTable()
   return true;
 }
 
+function lookupFlag(flags, i)
+{
+  let index = 0;
+  for (let j=0; j<i;) {
+    if (!flags[index].REPEAT_FLAG) {
+      j++;
+    } else {
+      j += flags[index].repeat_count + 1;
+      if (i<j)
+        break;
+    }
+    index++;
+  }
+  return flags[index];
+}
+
+
+function parseSimpleGlyf(i, glyf)
+{
+  let offset = meta.ttf.tables.loca.offsets[i];
+  if (offset < 0 || offset >= meta.tables['glyf'].length) {
+    alert("out of bounds loca[" + i + "] offset: " + offset); 
+    return false;
+  }
+  if (offset == meta.ttf.tables.loca.offsets[i+1]) {
+    glyf[i] = null;
+    return true;
+  }
+  meta.offset = offset + meta.tables['glyf'].offset;
+  let numberOfContours  = Uint16ToInt16(READINT(2, rsum));
+  let xMin              = Uint16ToInt16(READINT(2, rsum));
+  let yMin              = Uint16ToInt16(READINT(2, rsum));
+  let xMax              = Uint16ToInt16(READINT(2, rsum));
+  let yMax              = Uint16ToInt16(READINT(2, rsum));
+
+  if (numberOfContours == -1) {
+    glyf[i] = null;
+    return true;
+  }
+
+  let contourEnds       = [];
+  for (j=0; j<numberOfContours; j++) {
+    contourEnds[j] = READINT(2, rsum);
+  }
+
+  let instructionLength = READINT(2, rsum);
+  let instructions      = []
+  for (j=0; j<instructionLength; j++) {
+    instructions[j] = READINT(1);
+  }
+
+  let numPoints         = contourEnds[contourEnds.length-1]+1;
+  let flags             = [];
+  let flags_uncompressed= [];
+  for (j=0; j<numPoints; j++) {
+    let byte = READINT(1);
+    let ON_CURVE_POINT                       = (byte & 0x01) ? true : false;
+    let X_SHORT_VECTOR                       = (byte & 0x02) ? true : false;
+    let Y_SHORT_VECTOR                       = (byte & 0x04) ? true : false;
+    let REPEAT_FLAG                          = (byte & 0x08) ? true : false;
+    let X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR = (byte & 0x10) ? true : false;
+    let Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR = (byte & 0x20) ? true : false;
+    let OVERLAP_SIMPLE                       = (byte & 0x40) ? true : false;
+    let RESERVED                             = (byte & 0x80) ? true : false;
+    let flag = { ON_CURVE_POINT, X_SHORT_VECTOR, Y_SHORT_VECTOR, REPEAT_FLAG,
+                 X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR, Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR,
+                 OVERLAP_SIMPLE, RESERVED };
+    if (REPEAT_FLAG) {
+      let repeat_count = READINT(1);
+      j += repeat_count;
+      flag = Object.assign(flag, { repeat_count });
+    }
+    flags = flags.concat(flag);
+  }
+
+  let xCoordinates = [];
+  for (j=0; j<numPoints; j++) {
+    let flag = lookupFlag(flags, j);
+    if (flag.X_SHORT_VECTOR) {
+      xCoordinates = xCoordinates.concat(READINT(1));
+    } else {
+      if (flag.X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR)
+        continue;
+      xCoordinates = xCoordinates.concat(READINT(2, rsum));
+    }
+  }
+
+  let yCoordinates = [];
+  for (j=0; j<numPoints; j++) {
+    let flag = lookupFlag(flags, j);
+    if (flag.Y_SHORT_VECTOR) {
+      yCoordinates = yCoordinates.concat(READINT(1));
+    } else {
+      if (flag.Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR)
+        continue;
+      yCoordinates = yCoordinates.concat(READINT(2, rsum));
+    }
+  }
+
+  glyf[i] = { numberOfContours, xMin, yMin, xMax, yMax, contourEnds, instructionLength, instructions, flags, xCoordinates, yCoordinates };
+  return true;
+}
+
+
+function parseComplexGlyf(i, glyf)
+{
+  let offset = meta.ttf.tables.loca.offsets[i];
+  if (offset < 0 || offset >= meta.tables['glyf'].length) {
+    alert("out of bounds loca[" + i + "] offset: " + offset); 
+    return false;
+  }
+  if (offset == meta.ttf.tables.loca.offsets[i+1]) {
+    glyf[i] = null;
+    return true;
+  }
+  meta.offset = offset + meta.tables['glyf'].offset;
+  let numberOfContours = Uint16ToInt16(READINT(2, rsum));
+  let xMin             = Uint16ToInt16(READINT(2, rsum));
+  let yMin             = Uint16ToInt16(READINT(2, rsum));
+  let xMax             = Uint16ToInt16(READINT(2, rsum));
+  let yMax             = Uint16ToInt16(READINT(2, rsum));
+
+  if (numberOfContours != -1) {
+    glyf[i] = null;
+    return true;
+  }
+
+  let contourEnds      = [];
+  for (j=0; j<numberOfContours; j++) {
+    contourEnds[j] = READINT(2, rsum);
+  }
+  glyf[i] = { numberOfContours, xMin, yMin, xMax, yMax, contourEnds };
+  return true;
+}
+
 function parseGlyfTable()
 {
   console.log("parseGlyfTable()");
   if (meta.tables['glyf'] == undefined)
     return true;
 
-  meta.offset = meta.tables['glyf'].offset;
-
   let glyf = [];
   let i;
   for (i=0; i<meta.numGlyphs; i++) {
-    glyf[i].numberOfContours = Uint16ToInt16(READINT(2, rsum));
-    glyf[i].xMin             = Uint16ToInt16(READINT(2, rsum));
-    glyf[i].yMin             = Uint16ToInt16(READINT(2, rsum));
-    glyf[i].xMax             = Uint16ToInt16(READINT(2, rsum));
-    glyf[i].yMax             = Uint16ToInt16(READINT(2, rsum));
-    if (glyf[i].numberOfContours == -1) {
+    if (!parseSimpleGlyf(i, glyf)) {
+      return false;
     }
   }
+/*
+  for (i=0; i<meta.numGlyphs; i++) {
+    if (!parseComplexGlyf(i, glyf)) {
+      return false;
+    }
+  }
+*/
+  meta.ttf.tables.glyf = glyf;
+  return true;
 }
 
 function parse()
 {
-  if (parseTables() && parseHeadTable() && parseCmapTable() && parseMaxpTable() && parseLocaTable()) {
+  if (parseTables() && parseHeadTable() && parseCmapTable() && parseMaxpTable() && parseLocaTable() && parseGlyfTable()) {
     window.document.getElementById("download").download = filename + ".json.txt";
     window.document.getElementById("download").href = "data:text/json," + JSON.stringify(meta.ttf, null, 2);
     window.document.getElementById("download").style.display = "block";
