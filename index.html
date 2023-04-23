@@ -337,28 +337,9 @@ function lookupFlag(flags, i)
 
 function parseSimpleGlyf(i, glyf)
 {
-  let offset = meta.ttf.tables.loca.offsets[i];
-  if (offset < 0 || offset >= meta.tables['glyf'].length) {
-    alert("out of bounds loca[" + i + "] offset: " + offset); 
-    return false;
-  }
-  if (offset == meta.ttf.tables.loca.offsets[i+1]) {
-    glyf[i] = null;
-    return true;
-  }
-  meta.offset = offset + meta.tables['glyf'].offset;
-  let numberOfContours  = Uint16ToInt16(READINT(2, rsum));
-  let xMin              = Uint16ToInt16(READINT(2, rsum));
-  let yMin              = Uint16ToInt16(READINT(2, rsum));
-  let xMax              = Uint16ToInt16(READINT(2, rsum));
-  let yMax              = Uint16ToInt16(READINT(2, rsum));
-
-  if (numberOfContours == -1) {
-    glyf[i] = null;
-    return true;
-  }
-
   let contourEnds       = [];
+  let numberOfContours  = glyf[i].numberOfContours;
+
   for (j=0; j<numberOfContours; j++) {
     contourEnds[j] = READINT(2, rsum);
   }
@@ -417,12 +398,77 @@ function parseSimpleGlyf(i, glyf)
     }
   }
 
-  glyf[i] = { numberOfContours, xMin, yMin, xMax, yMax, contourEnds, instructionLength, instructions, flags, xCoordinates, yCoordinates };
+  glyf[i] = Object.assign(glyf[i], { contourEnds, instructionLength, instructions, flags, 
+                                     xCoordinates, yCoordinates });
   return true;
 }
 
+function parseCompoundGlyf(i, glyf)
+{
 
-function parseComplexGlyf(i, glyf)
+  let subglyfs        = [];
+  let more_components = true;
+
+  do {
+    let flags                    = READINT(2, rsum);
+    let glyphIndex               = READINT(2, rsum);
+
+    let ARGS_1_AND_2_ARE_WORDS   = (flags & 0x0001) ? true : false;
+    let ARGS_ARE_XY_VALUES       = (flags & 0x0002) ? true : false;
+    let ROUND_XY_TO_GRID         = (flags & 0x0004) ? true : false;
+    let WE_HAVE_A_SCALE          = (flags & 0x0008) ? true : false;
+    let OBSOLETE                 = (flags & 0x0010) ? true : false;
+    let MORE_COMPONENTS          = (flags & 0x0020) ? true : false;
+    let WE_HAVE_AN_X_AND_Y_SCALE = (flags & 0x0040) ? true : false;
+    let WE_HAVE_A_TWO_BY_TWO     = (flags & 0x0080) ? true : false;
+    let WE_HAVE_INSTRUCTIONS     = (flags & 0x0100) ? true : false;
+    let USE_MY_METRICS           = (flags & 0x0200) ? true : false;
+    let OVERLAP_COMPOUND         = (flags & 0x0400) ? true : false;
+
+    let subglyf = { flags, glyphIndex, ARGS_1_AND_2_ARE_WORDS, ARGS_ARE_XY_VALUES, ROUND_XY_TO_GRID,
+                    WE_HAVE_A_SCALE, OBSOLETE, MORE_COMPONENTS, WE_HAVE_AN_X_AND_Y_SCALE,
+                    WE_HAVE_A_TWO_BY_TWO, WE_HAVE_INSTRUCTIONS, USE_MY_METRICS, OVERLAP_COMPOUND };
+
+    if (ARGS_1_AND_2_ARE_WORDS) {
+      let arg1 = READINT(2, rsum);
+      let arg2 = READINT(2, rsum);
+      subglyf  = Object.assign(subglyf, { arg1, arg2 });
+    } else {
+      let arg1 = READINT(1);
+      let arg2 = READINT(1);
+      subglyf  = Object.assign(subglyf, { arg1, arg2 });
+    }
+
+    if (WE_HAVE_A_SCALE) {
+      let scale = READINT(2, rsum);
+      subglyf   = Object.assign(subglyf, { scale });
+    }
+
+    if (WE_HAVE_AN_X_AND_Y_SCALE) {
+      let x_scale = READINT(2, rsum);
+      let y_scale = READINT(2, rsum);
+      subglyf     = Object.assign(subglyf, { x_scale, y_scale });
+    }
+
+    if (WE_HAVE_A_TWO_BY_TWO) {
+      let A   = READINT(2, rsum);
+      let B   = READINT(2, rsum);
+      let C   = READINT(2, rsum);
+      let D   = READINT(2, rsum);
+      subglyf = Object.assign(subglyf, { A, B, C, D });
+    }
+
+    subglyfs = subglyfs.concat(subglyf);
+
+    more_components = MORE_COMPONENTS;
+  } while (more_components);
+
+  glyf[i] = Object.assign(glyf[i], { subglyfs });
+
+  return true;
+}
+
+function parseGlyf(i, glyf)
 {
   let offset = meta.ttf.tables.loca.offsets[i];
   if (offset < 0 || offset >= meta.tables['glyf'].length) {
@@ -440,17 +486,11 @@ function parseComplexGlyf(i, glyf)
   let xMax             = Uint16ToInt16(READINT(2, rsum));
   let yMax             = Uint16ToInt16(READINT(2, rsum));
 
-  if (numberOfContours != -1) {
-    glyf[i] = null;
-    return true;
+  glyf[i] = { numberOfContours, xMin, yMin, xMax, yMax };
+  if (numberOfContours == -1) {
+    return parseCompoundGlyf(i, glyf);
   }
-
-  let contourEnds      = [];
-  for (j=0; j<numberOfContours; j++) {
-    contourEnds[j] = READINT(2, rsum);
-  }
-  glyf[i] = { numberOfContours, xMin, yMin, xMax, yMax, contourEnds };
-  return true;
+  return parseSimpleGlyf(i, glyf);
 }
 
 function parseGlyfTable()
@@ -462,17 +502,11 @@ function parseGlyfTable()
   let glyf = [];
   let i;
   for (i=0; i<meta.numGlyphs; i++) {
-    if (!parseSimpleGlyf(i, glyf)) {
+    if (!parseGlyf(i, glyf)) {
       return false;
     }
   }
-/*
-  for (i=0; i<meta.numGlyphs; i++) {
-    if (!parseComplexGlyf(i, glyf)) {
-      return false;
-    }
-  }
-*/
+
   meta.ttf.tables.glyf = glyf;
   return true;
 }
