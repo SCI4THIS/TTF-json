@@ -511,9 +511,60 @@ function parseGlyfTable()
   return true;
 }
 
+function Uint8ToInt8(n)
+{
+  return (n << 24) >> 24;
+}
+
+function parsePCLTTable()
+{
+  console.log("parseCLTTable()");
+  if (meta.tables['PCLT'] == undefined)
+    return true;
+
+  meta.offset = meta.tables['PCLT'].offset;
+
+  let majorVersion = READINT(2, rsum);
+  let minorVersion = READINT(2, rsum);
+  let fontNumber   = READINT(4, rsum);
+  let pitch        = READINT(2, rsum);
+  let xHeight      = READINT(2, rsum);
+  let style        = READINT(2, rsum);
+  let typeFamily   = READINT(2, rsum);
+  let capHeight    = READINT(2, rsum);
+  let symbolSet    = READINT(2, rsum);
+  let typeface     = []
+  for (let i=0; i<16; i++) {
+    typeface[i]    = Uint8ToInt8(READINT(1));
+  }
+  let characterComplement = [];
+  for (let i=0; i<8; i++) {
+    characterComplement[i] = Uint8ToInt8(READINT(1));
+  }
+  let fileName = [];
+  for (let i=0; i<6; i++) {
+    fileName[i] = Uint8ToInt8(READINT(1));
+  }
+  let strokeWeight = READINT(1);
+  let widthType    = READINT(1);
+  let serifStyle   = Uint8ToInt8(READINT(1));
+  let reserved     = Uint8ToInt8(READINT(1));
+
+  meta.ttf.tables.PCLT = { majorVersion, minorVersion, fontNumber, pitch, xHeight, style, typeFamily,
+                           capHeight, symbolSet, typeface, characterComplement, fileName, strokeWeight,
+                           widthType, serifStyle, reserved };
+  
+}
+
 function parse()
 {
-  if (parseTables() && parseHeadTable() && parseCmapTable() && parseMaxpTable() && parseLocaTable() && parseGlyfTable()) {
+  if (parseTables() && 
+      parseHeadTable() && 
+      parseCmapTable() && 
+      parseMaxpTable() && 
+      parseLocaTable() && 
+      parseGlyfTable() &&
+      parsePCLTTable()) {
     window.document.getElementById("download").download = filename + ".json.txt";
     window.document.getElementById("download").href = "data:text/json," + JSON.stringify(meta.ttf, null, 2);
     window.document.getElementById("download").style.display = "block";
