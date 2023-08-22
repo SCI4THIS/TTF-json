@@ -377,25 +377,29 @@ function parseSimpleGlyf(i, glyf)
   let xCoordinates = [];
   for (j=0; j<numPoints; j++) {
     let flag = lookupFlag(flags, j);
+    let xCoord = 0;
     if (flag.X_SHORT_VECTOR) {
-      xCoordinates = xCoordinates.concat(READINT(1));
+      xCoord = READINT(1);
     } else {
       if (flag.X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR)
         continue;
-      xCoordinates = xCoordinates.concat(READINT(2, rsum));
+      xCoord = READINT(2, rsum);
     }
+    xCoordinates = xCoordinates.concat(Uint16ToInt16(xCoord));
   }
 
   let yCoordinates = [];
   for (j=0; j<numPoints; j++) {
     let flag = lookupFlag(flags, j);
+    let yCoord = 0;
     if (flag.Y_SHORT_VECTOR) {
-      yCoordinates = yCoordinates.concat(READINT(1));
+      yCoord = READINT(1);
     } else {
       if (flag.Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR)
         continue;
-      yCoordinates = yCoordinates.concat(READINT(2, rsum));
+      yCoord = READINT(2, rsum);
     }
+    yCoordinates = yCoordinates.concat(Uint16ToInt16(yCoord));
   }
 
   glyf[i] = Object.assign(glyf[i], { contourEnds, instructionLength, instructions, flags, 
