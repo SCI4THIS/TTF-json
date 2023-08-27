@@ -380,12 +380,14 @@ function parseSimpleGlyf(i, glyf)
     let xCoord = 0;
     if (flag.X_SHORT_VECTOR) {
       xCoord = READINT(1);
+      if (!flag.X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR)
+        xCoord = -xCoord;
     } else {
       if (flag.X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR)
         continue;
-      xCoord = READINT(2, rsum);
+      xCoord = Uint16ToInt16(READINT(2, rsum));
     }
-    xCoordinates = xCoordinates.concat(Uint16ToInt16(xCoord));
+    xCoordinates = xCoordinates.concat(xCoord);
   }
 
   let yCoordinates = [];
@@ -394,12 +396,14 @@ function parseSimpleGlyf(i, glyf)
     let yCoord = 0;
     if (flag.Y_SHORT_VECTOR) {
       yCoord = READINT(1);
+      if (!flag.Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR)
+        yCoord = -yCoord;
     } else {
       if (flag.Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR)
         continue;
-      yCoord = READINT(2, rsum);
+      yCoord = Uint16ToInt16(READINT(2, rsum));
     }
-    yCoordinates = yCoordinates.concat(Uint16ToInt16(yCoord));
+    yCoordinates = yCoordinates.concat(yCoord);
   }
 
   glyf[i] = Object.assign(glyf[i], { contourEnds, instructionLength, instructions, flags, 
