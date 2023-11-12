@@ -107,15 +107,17 @@ function parseHeadTable(meta)
   let unitsPerEm         = READINT(2, rsum, meta);
   let createdTime        = READINT(8, rsum, meta);
   let modifiedTime       = READINT(8, rsum, meta);
-  let xMin               = READINT(2, rsum, meta);
-  let yMin               = READINT(2, rsum, meta);
-  let xMax               = READINT(2, rsum, meta);
-  let yMax               = READINT(2, rsum, meta);
+  let xMin               = Uint16ToInt16(READINT(2, rsum, meta));
+  let yMin               = Uint16ToInt16(READINT(2, rsum, meta));
+  let xMax               = Uint16ToInt16(READINT(2, rsum, meta));
+  let yMax               = Uint16ToInt16(READINT(2, rsum, meta));
   let macStyle           = READINT(2, rsum, meta);
   let lowestRecPPEM      = READINT(2, rsum, meta);
   let fontDirectionHint  = READINT(2, rsum, meta);
   let indexToLocFormat   = READINT(2, rsum, meta);
   let glyphDataFormat    = READINT(2, rsum, meta);
+
+  console.log("xMin: " + xMin + ", yMin: " + yMin);
 
   if (magicNumber != 0x5F0F3CF5) {
     alert("Bad magicNumber " + magicNumber + " != " + 0x5F0F3CF5);

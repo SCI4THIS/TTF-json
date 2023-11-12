@@ -53,6 +53,71 @@ function download2()
   downloadURI(url, dl_filename);
 }
 
+function convert_to_svg_glyph_curve(curve_json)
+{
+  let svg = "";
+  for (let i=0; i<curve_json.length; i++) {
+    if (curve_json[i].on_curve) {
+      if (i == 0) {
+        svg += "M";
+      } else {
+        svg += "L";
+      }
+      svg += curve_json[i].xy[0];
+      svg += " ";
+      svg += curve_json[i].xy[1];
+      svg += " ";
+    } else {
+      let ip1 = (i + 1) % curve_json.length;
+      svg += "Q";
+      svg += curve_json[i].xy[0];
+      svg += " ";
+      svg += curve_json[i].xy[1];
+      svg += " ";
+      svg += curve_json[ip1].xy[0];
+      svg += " ";
+      svg += curve_json[ip1].xy[1];
+      svg += " ";
+    }
+  }
+  return svg;
+}
+
+function convert_to_svg_glyph(glyph_json)
+{
+  if (glyph_json == null) {
+    return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50\" height=\"50\"></svg>";
+  }
+
+  let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50\" height=\"50\"><g transform=\"translate(10, 38) scale(0.02, -0.02)\"><path d=\"";
+
+  for (let i=0; i<glyph_json.length; i++) {
+    svg += convert_to_svg_glyph_curve(glyph_json[i]);
+  }
+
+  return svg + "Z\"/></g></svg>";
+}
+
+function convert_to_svg()
+{
+  let json = JSON.parse(ttf_jq_json);
+  let table_el = window.document.getElementById("glyphs");
+  let table_tr_el = document.createElement("tr");
+  for (let i=0; i<json.length; i++) {
+    if (i != 0 && (i % 10) == 0) {
+      table_el.appendChild(table_tr_el);
+      table_tr_el = document.createElement("tr");
+    }
+    let table_td_el = document.createElement("td");
+    let svg = convert_to_svg_glyph(json[i]);
+    let svg_el = document.createElement("img");
+    svg_el.src = "data:image/svg+xml;base64," + btoa(svg);
+    table_td_el.appendChild(svg_el);
+    table_tr_el.appendChild(table_td_el);
+  }
+  table_el.appendChild(table_tr_el);
+}
+
 function readFile(input)
 {
   let file = input.files[0];
@@ -72,6 +137,7 @@ function readFile(input)
     ttf_jq_json = window.document.getElementById("output").innerHTML;
     append_status("status2", "Finished JQ conversion");
     window.document.getElementById("download2").style.display = "block";
+    convert_to_svg();
   }
 
   fileReader.onerror = function() {
@@ -93,6 +159,9 @@ Waiting for file.
 <div id="status2">
 </div>
 <a id="download2" style="display:none" href="javascript:download2()">Download converted JSON</a>
+
+<table id="glyphs" border="1px">
+</table>
 
 <div id="ttf-json-zip" style="visibility: hidden">
 </div>
@@ -201,6 +270,7 @@ def decompress_simple_glyf:
 
 <div id="output" style="visibility: hidden">
 </div>
+
 
 <script type="text/javascript">
 // WebAssembly module config

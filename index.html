@@ -112,15 +112,17 @@ function parseHeadTable(meta)
   let unitsPerEm         = READINT(2, rsum, meta);
   let createdTime        = READINT(8, rsum, meta);
   let modifiedTime       = READINT(8, rsum, meta);
-  let xMin               = READINT(2, rsum, meta);
-  let yMin               = READINT(2, rsum, meta);
-  let xMax               = READINT(2, rsum, meta);
-  let yMax               = READINT(2, rsum, meta);
+  let xMin               = Uint16ToInt16(READINT(2, rsum, meta));
+  let yMin               = Uint16ToInt16(READINT(2, rsum, meta));
+  let xMax               = Uint16ToInt16(READINT(2, rsum, meta));
+  let yMax               = Uint16ToInt16(READINT(2, rsum, meta));
   let macStyle           = READINT(2, rsum, meta);
   let lowestRecPPEM      = READINT(2, rsum, meta);
   let fontDirectionHint  = READINT(2, rsum, meta);
   let indexToLocFormat   = READINT(2, rsum, meta);
   let glyphDataFormat    = READINT(2, rsum, meta);
+
+  console.log("xMin: " + xMin + ", yMin: " + yMin);
 
   if (magicNumber != 0x5F0F3CF5) {
     alert("Bad magicNumber " + magicNumber + " != " + 0x5F0F3CF5);
@@ -375,12 +377,17 @@ function parseSimpleGlyf(i, glyf, meta)
     let xCoord = 0;
     if (flag.X_SHORT_VECTOR) {
       xCoord = READINT(1, null, meta);
+      if (flag.X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR) {
+        xCoordinates = xCoordinates.concat(xCoord);
+      } else {
+        xCoordinates = xCoordinates.concat(-xCoord);
+      }
     } else {
       if (flag.X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR)
         continue;
       xCoord = READINT(2, rsum, meta);
+      xCoordinates = xCoordinates.concat(Uint16ToInt16(xCoord));
     }
-    xCoordinates = xCoordinates.concat(Uint16ToInt16(xCoord));
   }
 
   let yCoordinates = [];
@@ -389,12 +396,17 @@ function parseSimpleGlyf(i, glyf, meta)
     let yCoord = 0;
     if (flag.Y_SHORT_VECTOR) {
       yCoord = READINT(1, null, meta);
+      if (flag.Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR) {
+        yCoordinates = yCoordinates.concat(yCoord);
+      } else {
+        yCoordinates = yCoordinates.concat(-yCoord);
+      }
     } else {
       if (flag.Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR)
         continue;
       yCoord = READINT(2, rsum, meta);
+      yCoordinates = yCoordinates.concat(Uint16ToInt16(yCoord));
     }
-    yCoordinates = yCoordinates.concat(Uint16ToInt16(yCoord));
   }
 
   glyf[i] = Object.assign(glyf[i], { contourEnds, instructionLength, instructions, flags, 
@@ -620,6 +632,71 @@ function download2()
   downloadURI(url, dl_filename);
 }
 
+function convert_to_svg_glyph_curve(curve_json)
+{
+  let svg = "";
+  for (let i=0; i<curve_json.length; i++) {
+    if (curve_json[i].on_curve) {
+      if (i == 0) {
+        svg += "M";
+      } else {
+        svg += "L";
+      }
+      svg += curve_json[i].xy[0];
+      svg += " ";
+      svg += curve_json[i].xy[1];
+      svg += " ";
+    } else {
+      let ip1 = (i + 1) % curve_json.length;
+      svg += "Q";
+      svg += curve_json[i].xy[0];
+      svg += " ";
+      svg += curve_json[i].xy[1];
+      svg += " ";
+      svg += curve_json[ip1].xy[0];
+      svg += " ";
+      svg += curve_json[ip1].xy[1];
+      svg += " ";
+    }
+  }
+  return svg;
+}
+
+function convert_to_svg_glyph(glyph_json)
+{
+  if (glyph_json == null) {
+    return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50\" height=\"50\"></svg>";
+  }
+
+  let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50\" height=\"50\"><g transform=\"translate(10, 38) scale(0.02, -0.02)\"><path d=\"";
+
+  for (let i=0; i<glyph_json.length; i++) {
+    svg += convert_to_svg_glyph_curve(glyph_json[i]);
+  }
+
+  return svg + "Z\"/></g></svg>";
+}
+
+function convert_to_svg()
+{
+  let json = JSON.parse(ttf_jq_json);
+  let table_el = window.document.getElementById("glyphs");
+  let table_tr_el = document.createElement("tr");
+  for (let i=0; i<json.length; i++) {
+    if (i != 0 && (i % 10) == 0) {
+      table_el.appendChild(table_tr_el);
+      table_tr_el = document.createElement("tr");
+    }
+    let table_td_el = document.createElement("td");
+    let svg = convert_to_svg_glyph(json[i]);
+    let svg_el = document.createElement("img");
+    svg_el.src = "data:image/svg+xml;base64," + btoa(svg);
+    table_td_el.appendChild(svg_el);
+    table_tr_el.appendChild(table_td_el);
+  }
+  table_el.appendChild(table_tr_el);
+}
+
 function readFile(input)
 {
   let file = input.files[0];
@@ -639,6 +716,7 @@ function readFile(input)
     ttf_jq_json = window.document.getElementById("output").innerHTML;
     append_status("status2", "Finished JQ conversion");
     window.document.getElementById("download2").style.display = "block";
+    convert_to_svg();
   }
 
   fileReader.onerror = function() {
@@ -660,6 +738,9 @@ Waiting for file.
 <div id="status2">
 </div>
 <a id="download2" style="display:none" href="javascript:download2()">Download converted JSON</a>
+
+<table id="glyphs" border="1px">
+</table>
 
 <div id="ttf-json-zip" style="visibility: hidden">
 </div>
@@ -768,6 +849,7 @@ def decompress_simple_glyf:
 
 <div id="output" style="visibility: hidden">
 </div>
+
 
 <script type="text/javascript">
 // WebAssembly module config
