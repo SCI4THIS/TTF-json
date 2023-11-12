@@ -711,6 +711,33 @@ function convert_to_svg()
   table_el.appendChild(table_tr_el);
 }
 
+function display_svg()
+{
+    convert_to_svg();
+    append_status("status3", "Generated SVG.");
+}
+
+function jqconvert()
+{
+    launch();
+    ttf_jq_json = window.document.getElementById("output").innerHTML;
+    window.document.getElementById("download2").style.display = "block";
+    append_status("status2", "Finished JQ conversion");
+    append_status("status3", "Generating SVG...");
+    setTimeout(display_svg, 0);
+}
+
+function parseFile()
+{
+    meta = { offset: 0, readbuf: new Uint8Array(fileReader.result), ttf: { } };
+    ttf_json = parse(meta);
+    window.document.getElementById("download1").style.display = "block";
+    window.document.getElementById("input").innerHTML = ttf_json;
+    append_status("status", "Parsed file.");
+    append_status("status2", "Starting JQ conversion");
+    setTimeout(jqconvert, 0);
+}
+
 function readFile(input)
 {
   let file = input.files[0];
@@ -719,18 +746,8 @@ function readFile(input)
   set_status("status", "Loading file...");
   fileReader.onload = function() {
     append_status("status", "Loaded file.");
-    meta = { offset: 0, readbuf: new Uint8Array(fileReader.result), ttf: { } };
     append_status("status", "Parsing file...");
-    ttf_json = parse(meta);
-    window.document.getElementById("download1").style.display = "block";
-    window.document.getElementById("input").innerHTML = ttf_json;
-    append_status("status", "Parsed file.");
-    append_status("status2", "Starting JQ conversion");
-    launch();
-    ttf_jq_json = window.document.getElementById("output").innerHTML;
-    append_status("status2", "Finished JQ conversion");
-    window.document.getElementById("download2").style.display = "block";
-    convert_to_svg();
+    setTimeout(parseFile, 0);
   }
 
   fileReader.onerror = function() {
@@ -752,6 +769,8 @@ Waiting for file.
 <div id="status2">
 </div>
 <a id="download2" style="display:none" href="javascript:download2()">Download converted JSON</a>
+<div id="status3">
+</div>
 
 <table id="glyphs" border="1px">
 </table>
