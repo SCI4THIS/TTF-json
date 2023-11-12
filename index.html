@@ -235,6 +235,20 @@ alert("Unfinished format 2 subHeaders / glyhphIndexArray");
                                                              idDelta, idRangeOffset, glyphIndexArray });
         break;
       }
+      case 6: {
+        let length          = READINT(2, rsum, meta);
+        let language        = READINT(2, rsum, meta);
+        let firstCode       = READINT(2, rsum, meta);
+        let entryCount      = READINT(2, rsum, meta);
+        let glyphIdArray    = [];
+        for (let j=0; j<entryCount; j++) {
+          glyphIdArray[j] = READINT(2, rsum, meta);
+	}
+        subtables[i]         = Object.assign(subtables[i],
+		{ format, length, language, firstCode, entryCount,
+                  glyphIdArray });
+        break;
+      }
       default:
         alert("Unhandled format " + format);
         return false;
@@ -299,7 +313,7 @@ function parseLocaTable(meta)
       return false;
     }
     for (let i=0; i<meta.numGlyphs + 1; i++) {
-      offsets[i] = READINT(2, rsum, meta);
+      offsets[i] = 2 * READINT(2, rsum, meta);
     }
   }
   if (meta.indexToLocFormat == 1) {
