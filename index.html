@@ -668,20 +668,12 @@ function download2()
 function convert_to_svg_glyph_curve(curve_json, ABCDEF)
 {
   let svg = "";
-  let A = 1.0;
-  let B = 0.0;
-  let C = 0.0;
-  let D = 1.0;
-  let E = 0.0;
-  let F = 0.0;
-  if (ABCDEF != undefined) {
-    A = ABCDEF.A;
-    B = ABCDEF.B;
-    C = ABCDEF.C;
-    D = ABCDEF.D;
-    E = ABCDEF.E;
-    F = ABCDEF.F;
-  }
+  let A = ABCDEF.A;
+  let B = ABCDEF.B;
+  let C = ABCDEF.C;
+  let D = ABCDEF.D;
+  let E = ABCDEF.E;
+  let F = ABCDEF.F;
   for (let i=0; i<curve_json.length; i++) {
     if (curve_json[i].on_curve) {
       if (i == 0) {
@@ -709,6 +701,40 @@ function convert_to_svg_glyph_curve(curve_json, ABCDEF)
   return svg;
 }
 
+function convert_to_svg_glyph_sub(glyph_jsons, idx, ABCDEF)
+{
+  let svg = "";
+  let glyph_json = glyph_jsons[idx];
+  if (!Array.isArray(glyph_json)) {
+    /* composite glyph */
+    let subglyfs = glyph_json.subglyfs;
+    for (let i=0; i<subglyfs.length; i++) {
+      subglyf = subglyfs[i];
+      if (!subglyf.ARGS_ARE_XY_VALUES) {
+        alert("!ARGS_ARE_XY_VALUES Unsupported");
+      }
+/* a b e     A B E    (Aa + Cb) (Ba + Db) (Ea + Fb + e)
+ * c d f  x  C D F  = (Ac + Cd) (Bc + Dd) (Ec + Fd + f)
+ * 0 0 1     0 0 1        0         0           1
+ */
+      let ABCDEF_2 = {
+        A: (ABCDEF.A * subglyf.A + ABCDEF.C * subglyf.B),
+        B: (ABCDEF.B * subglyf.A + ABCDEF.D * subglyf.B),
+        C: (ABCDEF.A * subglyf.C + ABCDEF.C * subglyf.D),
+        D: (ABCDEF.B * subglyf.C + ABCDEF.D * subglyf.D),
+        E: (ABCDEF.E * subglyf.A + ABCDEF.F * subglyf.B + subglyf.E),
+        F: (ABCDEF.E * subglyf.C + ABCDEF.F * subglyf.D + subglyf.F)
+      };
+      svg += convert_to_svg_glyph_sub(glyph_jsons, subglyf.glyphIndex, ABCDEF_2);
+    }
+  } else {
+    for (let i=0; i<glyph_json.length; i++) {
+      svg += convert_to_svg_glyph_curve(glyph_json[i], ABCDEF);
+    }
+  }
+  return svg;
+}
+
 function convert_to_svg_glyph(glyph_jsons, idx)
 {
   let glyph_json = glyph_jsons[idx]
@@ -719,31 +745,7 @@ function convert_to_svg_glyph(glyph_jsons, idx)
 
   let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50\" height=\"50\"><g transform=\"translate(10, 38) scale(0.02, -0.02)\"><path d=\"";
 
-  if (!Array.isArray(glyph_json)) {
-    /* composite glyph */
-    let subglyfs = glyph_json.subglyfs;
-    for (let i=0; i<subglyfs.length; i++) {
-      subglyf = subglyfs[i];
-      if (!subglyf.ARGS_ARE_XY_VALUES) {
-        alert("!ARGS_ARE_XY_VALUES Unsupported");
-      }
-      sub_glyph_json = glyph_jsons[subglyf.glyphIndex];
-      if (!Array.isArray(sub_glyph_json)) {
-        alert("Nested composite unsupported");
-      }
-      let ABCDEF = {
-        A: subglyf.A, B: subglyf.B, C: subglyf.C,
-        D: subglyf.D, E: subglyf.E, F: subglyf.F
-      };
-      for (let j=0; j<sub_glyph_json.length; j++) {
-        svg += convert_to_svg_glyph_curve(sub_glyph_json[j], ABCDEF)
-      }
-    }
-  } else {
-    for (let i=0; i<glyph_json.length; i++) {
-      svg += convert_to_svg_glyph_curve(glyph_json[i]);
-    }
-  }
+  svg += convert_to_svg_glyph_sub(glyph_jsons, idx, { A: 1, B: 0, C: 0, D: 1, E: 0, F: 0} );
 
   return svg + "Z\"/></g></svg>";
 }
