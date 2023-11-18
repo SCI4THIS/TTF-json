@@ -448,35 +448,54 @@ function parseCompoundGlyf(i, glyf, meta)
     let subglyf = { flags, glyphIndex, ARGS_1_AND_2_ARE_WORDS, ARGS_ARE_XY_VALUES, ROUND_XY_TO_GRID,
                     WE_HAVE_A_SCALE, OBSOLETE, MORE_COMPONENTS, WE_HAVE_AN_X_AND_Y_SCALE,
                     WE_HAVE_A_TWO_BY_TWO, WE_HAVE_INSTRUCTIONS, USE_MY_METRICS, OVERLAP_COMPOUND };
+    let A = 1.0;
+    let B = 0.0;
+    let C = 0.0;
+    let D = 1.0;
+    let E = 0.0;
+    let F = 0.0;
+    let arg1 = 0;
+    let arg2 = 0;
 
     if (ARGS_1_AND_2_ARE_WORDS) {
-      let arg1 = READINT(2, rsum, meta);
-      let arg2 = READINT(2, rsum, meta);
+      arg1 = Uint16ToInt16(READINT(2, rsum, meta));
+      arg2 = Uint16ToInt16(READINT(2, rsum, meta));
       subglyf  = Object.assign(subglyf, { arg1, arg2 });
     } else {
-      let arg1 = READINT(1, null, meta);
-      let arg2 = READINT(1, null, meta);
+      arg1 = READINT(1, null, meta);
+      arg2 = READINT(1, null, meta);
       subglyf  = Object.assign(subglyf, { arg1, arg2 });
     }
 
     if (WE_HAVE_A_SCALE) {
       let scale = READINT(2, rsum, meta);
+      A = scale / 16384.0;
+      D = A;
       subglyf   = Object.assign(subglyf, { scale });
     }
 
     if (WE_HAVE_AN_X_AND_Y_SCALE) {
       let x_scale = READINT(2, rsum, meta);
       let y_scale = READINT(2, rsum, meta);
+      A = x_scale;
+      D = y_scale;
       subglyf     = Object.assign(subglyf, { x_scale, y_scale });
     }
 
     if (WE_HAVE_A_TWO_BY_TWO) {
-      let A   = READINT(2, rsum, meta);
-      let B   = READINT(2, rsum, meta);
-      let C   = READINT(2, rsum, meta);
-      let D   = READINT(2, rsum, meta);
-      subglyf = Object.assign(subglyf, { A, B, C, D });
+      A   = READINT(2, rsum, meta);
+      B   = READINT(2, rsum, meta);
+      C   = READINT(2, rsum, meta);
+      D   = READINT(2, rsum, meta);
     }
+
+    if (ARGS_ARE_XY_VALUES) {
+      E = arg1;
+      F = arg2;
+    }
+    /* else: needs the decompressed coordinate information to compute */
+
+    subglyf = Object.assign(subglyf, { A, B, C, D, E, F });
 
     subglyfs = subglyfs.concat(subglyf);
 

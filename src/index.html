@@ -53,9 +53,23 @@ function download2()
   downloadURI(url, dl_filename);
 }
 
-function convert_to_svg_glyph_curve(curve_json)
+function convert_to_svg_glyph_curve(curve_json, ABCDEF)
 {
   let svg = "";
+  let A = 1.0;
+  let B = 0.0;
+  let C = 0.0;
+  let D = 1.0;
+  let E = 0.0;
+  let F = 0.0;
+  if (ABCDEF != undefined) {
+    A = ABCDEF.A;
+    B = ABCDEF.B;
+    C = ABCDEF.C;
+    D = ABCDEF.D;
+    E = ABCDEF.E;
+    F = ABCDEF.F;
+  }
   for (let i=0; i<curve_json.length; i++) {
     if (curve_json[i].on_curve) {
       if (i == 0) {
@@ -63,36 +77,60 @@ function convert_to_svg_glyph_curve(curve_json)
       } else {
         svg += "L";
       }
-      svg += curve_json[i].xy[0];
+      svg += A * curve_json[i].xy[0] + B * curve_json[i].xy[1] + E;
       svg += " ";
-      svg += curve_json[i].xy[1];
+      svg += C * curve_json[i].xy[0] + D * curve_json[i].xy[1] + F;
       svg += " ";
     } else {
       let ip1 = (i + 1) % curve_json.length;
       svg += "Q";
-      svg += curve_json[i].xy[0];
+      svg += A * curve_json[i].xy[0] + B * curve_json[i].xy[1] + E;
       svg += " ";
-      svg += curve_json[i].xy[1];
+      svg += C * curve_json[i].xy[0] + D * curve_json[i].xy[1] + F;
       svg += " ";
-      svg += curve_json[ip1].xy[0];
+      svg += A * curve_json[ip1].xy[0] + B * curve_json[ip1].xy[1] + E;
       svg += " ";
-      svg += curve_json[ip1].xy[1];
+      svg += C * curve_json[ip1].xy[0] + D * curve_json[ip1].xy[1] + F;
       svg += " ";
     }
   }
   return svg;
 }
 
-function convert_to_svg_glyph(glyph_json)
+function convert_to_svg_glyph(glyph_jsons, idx)
 {
+  let glyph_json = glyph_jsons[idx]
+
   if (glyph_json == null) {
     return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50\" height=\"50\"></svg>";
   }
 
   let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50\" height=\"50\"><g transform=\"translate(10, 38) scale(0.02, -0.02)\"><path d=\"";
 
-  for (let i=0; i<glyph_json.length; i++) {
-    svg += convert_to_svg_glyph_curve(glyph_json[i]);
+  if (!Array.isArray(glyph_json)) {
+    /* composite glyph */
+    let subglyfs = glyph_json.subglyfs;
+    for (let i=0; i<subglyfs.length; i++) {
+      subglyf = subglyfs[i];
+      if (!subglyf.ARGS_ARE_XY_VALUES) {
+        alert("!ARGS_ARE_XY_VALUES Unsupported");
+      }
+      sub_glyph_json = glyph_jsons[subglyf.glyphIndex];
+      if (!Array.isArray(sub_glyph_json)) {
+        alert("Nested composite unsupported");
+      }
+      let ABCDEF = {
+        A: subglyf.A, B: subglyf.B, C: subglyf.C,
+        D: subglyf.D, E: subglyf.E, F: subglyf.F
+      };
+      for (let j=0; j<sub_glyph_json.length; j++) {
+        svg += convert_to_svg_glyph_curve(sub_glyph_json[j], ABCDEF)
+      }
+    }
+  } else {
+    for (let i=0; i<glyph_json.length; i++) {
+      svg += convert_to_svg_glyph_curve(glyph_json[i]);
+    }
   }
 
   return svg + "Z\"/></g></svg>";
@@ -109,7 +147,7 @@ function convert_to_svg()
       table_tr_el = document.createElement("tr");
     }
     let table_td_el = document.createElement("td");
-    let svg = convert_to_svg_glyph(json[i]);
+    let svg = convert_to_svg_glyph(json, i);
     let svg_el = document.createElement("img");
     svg_el.src = "data:image/svg+xml;base64," + btoa(svg);
     table_td_el.appendChild(svg_el);
@@ -282,8 +320,12 @@ def decompress_simple_glyf:
       );
                             
 
-.tables.glyf | map(if (type=="object" and .numberOfContours != -1) 
-                   then (. | decompress_simple_glyf)
+.tables.glyf | map(if (type=="object")
+                   then
+		     if (.numberOfContours != -1)
+                     then (. | decompress_simple_glyf)
+		     else (.)
+		     end
                    else null end)
 </div>
 
