@@ -189,7 +189,7 @@ NS_Matrix.decompose = function ()
     for (j = i + 1; j < this._n; j++) {
       this._lu[this.idx(j,i)] /= this._lu[this.idx(i,i)]
       for (k = i + 1; k < this._n; k++) {
-        this._lu[this.idx(j,k)] -= 
+        this._lu[this.idx(j,k)] -=
                  this._lu[this.idx(j,i)] * this._lu[this.idx(i,k)]
       }
     }

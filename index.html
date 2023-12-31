@@ -730,7 +730,7 @@ function tri_area(p1, p2, p3)
  *       D = s2p2.y - s2p1.y
  *
  * The inverse is:
- * 
+ *
  * | A , B | -1                    |  D , -B |
  * | C , D |    =  (1 / (AD - BC)) | -C ,  A |
  *
@@ -802,7 +802,7 @@ function segsect(s1, s2)
   }
   u =  (1 / determinate) * ( D * (s2.p1.x - s1.p1.x) - B * (s2.p1.y - s1.p1.y));
   v = -(1 / determinate) * (-C * (s2.p1.x - s1.p1.x) + A * (s2.p1.y - s1.p1.y));
- 
+
   if (u < 0 || u > 1 || v < 0 || v > 1) {
     return { type: "N" };
   }
@@ -920,7 +920,7 @@ function poly_point_inside(pt, polyline)
   if (count % 2 == 1) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -965,14 +965,14 @@ function polygons_from_polylines(polylines)
   }
 
   polygons = polygons.filter(function (el) { return el != null; });
-  
+
   return polygons;
 }
 
 /*
  *            P1
  *
- *           
+ *
  *       C1   T   C2
  *
  *
@@ -1171,7 +1171,7 @@ function sum(accum, current)
 
 function rrsum(a)
 {
-  return a.reduceRight(sum); 
+  return a.reduceRight(sum);
 }
 
 function rsum(a)
@@ -1290,7 +1290,7 @@ function parseHeadTable(meta)
     return false;
   }
 
-  meta.ttf.tables.head = { version, fontRevision, checksumAdjustment, magicNumber, flags, unitsPerEm, 
+  meta.ttf.tables.head = { version, fontRevision, checksumAdjustment, magicNumber, flags, unitsPerEm,
     modifiedTime, createdTime, xMin, yMin, xMax, yMax, macStyle, lowestRecPPEM, fontDirectionHint, indexToLocFormat,
     glyphDataFormat };
 
@@ -1391,7 +1391,7 @@ alert("Unfinished format 2 subHeaders / glyhphIndexArray");
         for (let j=0; meta.offset < subtables[i].offset + length; j++) {
           glyphIdArray[j] = READINT(2, rsum, meta);
         }
-        subtables[i]         = Object.assign(subtables[i], { format, length, language, segCountX2, searchRange, 
+        subtables[i]         = Object.assign(subtables[i], { format, length, language, segCountX2, searchRange,
                                                              entrySelector, rangeShift, endCode, startCode,
                                                              idDelta, idRangeOffset, glyphIdArray });
         break;
@@ -1584,7 +1584,7 @@ function parseSimpleGlyf(i, glyf, meta)
     }
   }
 
-  glyf[i] = Object.assign(glyf[i], { contourEnds, instructionLength, instructions, flags, 
+  glyf[i] = Object.assign(glyf[i], { contourEnds, instructionLength, instructions, flags,
                                      xCoordinates, yCoordinates });
   return true;
 }
@@ -1677,7 +1677,7 @@ function parseGlyf(i, glyf, meta)
 {
   let offset = meta.ttf.tables.loca.offsets[i];
   if (offset < 0 || offset >= meta.tables['glyf'].length) {
-    alert("out of bounds loca[" + i + "] offset: " + offset); 
+    alert("out of bounds loca[" + i + "] offset: " + offset);
     return false;
   }
   if (offset == meta.ttf.tables.loca.offsets[i+1]) {
@@ -1758,17 +1758,17 @@ function parsePCLTTable(meta)
   meta.ttf.tables.PCLT = { majorVersion, minorVersion, fontNumber, pitch, xHeight, style, typeFamily,
                            capHeight, symbolSet, typeface, characterComplement, fileName, strokeWeight,
                            widthType, serifStyle, reserved };
-  
+
   return true;
 }
 
 function parse(meta)
 {
-  if (parseTables(meta) && 
-      parseHeadTable(meta) && 
-      parseCmapTable(meta) && 
-      parseMaxpTable(meta) && 
-      parseLocaTable(meta) && 
+  if (parseTables(meta) &&
+      parseHeadTable(meta) &&
+      parseCmapTable(meta) &&
+      parseMaxpTable(meta) &&
+      parseLocaTable(meta) &&
       parseGlyfTable(meta) &&
       parsePCLTTable(meta)) {
     return [ JSON.stringify(meta.ttf, null, 2), meta.ttf.tables.cmap ];
@@ -1821,7 +1821,7 @@ function lookup_cmap_glyph_sub(cmap, char_code)
     default:
       alert("Unhandled format: " + cmap.format);
       break;
-      
+
   }
 }
 
@@ -2082,7 +2082,7 @@ NS_Prag.run = function (prog, draw, draw_arg)
         case 3: prog.gl[fxs[0]](loc, fxs[1], fxs[2]); break;
         case 4: prog.gl[fxs[0]](loc, fxs[1], fxs[2], fxs[3]); break;
         case 5: prog.gl[fxs[0]](loc, fxs[1], fxs[2], fxs[3], fxs[4]); break;
-        case 6: prog.gl[fxs[0]](loc, fxs[1], fxs[2], fxs[3], fxs[4], fxs[5]); 
+        case 6: prog.gl[fxs[0]](loc, fxs[1], fxs[2], fxs[3], fxs[4], fxs[5]);
             break;
       }
     }
@@ -2351,7 +2351,7 @@ NS_Matrix.decompose = function ()
     for (j = i + 1; j < this._n; j++) {
       this._lu[this.idx(j,i)] /= this._lu[this.idx(i,i)]
       for (k = i + 1; k < this._n; k++) {
-        this._lu[this.idx(j,k)] -= 
+        this._lu[this.idx(j,k)] -=
                  this._lu[this.idx(j,i)] * this._lu[this.idx(i,k)]
       }
     }

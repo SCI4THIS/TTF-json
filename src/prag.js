@@ -15,7 +15,7 @@ NS_Prag.run = function (prog, draw, draw_arg)
         case 3: prog.gl[fxs[0]](loc, fxs[1], fxs[2]); break;
         case 4: prog.gl[fxs[0]](loc, fxs[1], fxs[2], fxs[3]); break;
         case 5: prog.gl[fxs[0]](loc, fxs[1], fxs[2], fxs[3], fxs[4]); break;
-        case 6: prog.gl[fxs[0]](loc, fxs[1], fxs[2], fxs[3], fxs[4], fxs[5]); 
+        case 6: prog.gl[fxs[0]](loc, fxs[1], fxs[2], fxs[3], fxs[4], fxs[5]);
             break;
       }
     }

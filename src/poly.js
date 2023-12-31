@@ -46,7 +46,7 @@ function tri_area(p1, p2, p3)
  *       D = s2p2.y - s2p1.y
  *
  * The inverse is:
- * 
+ *
  * | A , B | -1                    |  D , -B |
  * | C , D |    =  (1 / (AD - BC)) | -C ,  A |
  *
@@ -118,7 +118,7 @@ function segsect(s1, s2)
   }
   u =  (1 / determinate) * ( D * (s2.p1.x - s1.p1.x) - B * (s2.p1.y - s1.p1.y));
   v = -(1 / determinate) * (-C * (s2.p1.x - s1.p1.x) + A * (s2.p1.y - s1.p1.y));
- 
+
   if (u < 0 || u > 1 || v < 0 || v > 1) {
     return { type: "N" };
   }
@@ -236,7 +236,7 @@ function poly_point_inside(pt, polyline)
   if (count % 2 == 1) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -281,14 +281,14 @@ function polygons_from_polylines(polylines)
   }
 
   polygons = polygons.filter(function (el) { return el != null; });
-  
+
   return polygons;
 }
 
 /*
  *            P1
  *
- *           
+ *
  *       C1   T   C2
  *
  *

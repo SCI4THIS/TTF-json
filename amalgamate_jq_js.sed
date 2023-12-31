@@ -1,6 +1,6 @@
 /<script src="jq.js">/ {
   i \
 <script>
-  r tmp.js
+  r tmp1.js
   d
 }

@@ -130,7 +130,7 @@ int main(int argc, char **argv)
       case 17: if (c == '"') { state = 18; } break;
       case 18: break;
 
-      
+
     }
     if (state != 17) {
       printf("%c", c);
@@ -140,6 +140,6 @@ int main(int argc, char **argv)
 
   fclose(js_file);
   fclose(wasm_file);
-  
+
   return 0;
 }

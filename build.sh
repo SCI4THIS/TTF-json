@@ -1,7 +1,7 @@
 #!/bin/bash
 
-gcc -o embed_wasm src/embed_wasm.c
-./embed_wasm src/jq.js src/jq.js.wasm > tmp1.js
+gcc -o embed_wasm.exe src/embed_wasm.c
+./embed_wasm.exe src/jq.js src/jq.js.wasm > tmp1.js
 sed -f amalgamate_jq_js.sed src/index.html > tmp2.js
 sed -f amalgamate_earcut.sed tmp2.js > tmp3.js
 sed -f amalgamate_poly.sed tmp3.js > tmp4.js
@@ -22,3 +22,4 @@ rm tmp4.js
 rm tmp3.js
 rm tmp2.js
 rm tmp1.js
+rm embed_wasm.exe
