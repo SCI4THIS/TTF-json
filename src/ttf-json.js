@@ -5,7 +5,7 @@ function sum(accum, current)
 
 function rrsum(a)
 {
-  return a.reduceRight(sum); 
+  return a.reduceRight(sum);
 }
 
 function rsum(a)
@@ -124,7 +124,7 @@ function parseHeadTable(meta)
     return false;
   }
 
-  meta.ttf.tables.head = { version, fontRevision, checksumAdjustment, magicNumber, flags, unitsPerEm, 
+  meta.ttf.tables.head = { version, fontRevision, checksumAdjustment, magicNumber, flags, unitsPerEm,
     modifiedTime, createdTime, xMin, yMin, xMax, yMax, macStyle, lowestRecPPEM, fontDirectionHint, indexToLocFormat,
     glyphDataFormat };
 
@@ -215,19 +215,19 @@ alert("Unfinished format 2 subHeaders / glyhphIndexArray");
         }
         let idDelta         = [];
         for (let j=0; j<segCount; j++) {
-          idDelta[j]        = READINT(2, rsum, meta);
+          idDelta[j]        = Uint16ToInt16(READINT(2, rsum, meta));
         }
         let idRangeOffset   = [];
         for (let j=0; j<segCount; j++) {
-          idDelta[j]        = READINT(2, rsum, meta);
+          idRangeOffset[j]  = READINT(2, rsum, meta);
         }
-        let glyphIndexArray = [];
+        let glyphIdArray = [];
         for (let j=0; meta.offset < subtables[i].offset + length; j++) {
-          glyphIndexArray[j] = READINT(2, rsum, meta);
+          glyphIdArray[j] = READINT(2, rsum, meta);
         }
-        subtables[i]         = Object.assign(subtables[i], { format, length, language, segCountX2, searchRange, 
+        subtables[i]         = Object.assign(subtables[i], { format, length, language, segCountX2, searchRange,
                                                              entrySelector, rangeShift, endCode, startCode,
-                                                             idDelta, idRangeOffset, glyphIndexArray });
+                                                             idDelta, idRangeOffset, glyphIdArray });
         break;
       }
       case 6: {
@@ -418,7 +418,7 @@ function parseSimpleGlyf(i, glyf, meta)
     }
   }
 
-  glyf[i] = Object.assign(glyf[i], { contourEnds, instructionLength, instructions, flags, 
+  glyf[i] = Object.assign(glyf[i], { contourEnds, instructionLength, instructions, flags,
                                      xCoordinates, yCoordinates });
   return true;
 }
@@ -511,7 +511,7 @@ function parseGlyf(i, glyf, meta)
 {
   let offset = meta.ttf.tables.loca.offsets[i];
   if (offset < 0 || offset >= meta.tables['glyf'].length) {
-    alert("out of bounds loca[" + i + "] offset: " + offset); 
+    alert("out of bounds loca[" + i + "] offset: " + offset);
     return false;
   }
   if (offset == meta.ttf.tables.loca.offsets[i+1]) {
@@ -592,21 +592,95 @@ function parsePCLTTable(meta)
   meta.ttf.tables.PCLT = { majorVersion, minorVersion, fontNumber, pitch, xHeight, style, typeFamily,
                            capHeight, symbolSet, typeface, characterComplement, fileName, strokeWeight,
                            widthType, serifStyle, reserved };
-  
+
   return true;
 }
 
 function parse(meta)
 {
-  if (parseTables(meta) && 
-      parseHeadTable(meta) && 
-      parseCmapTable(meta) && 
-      parseMaxpTable(meta) && 
-      parseLocaTable(meta) && 
+  if (parseTables(meta) &&
+      parseHeadTable(meta) &&
+      parseCmapTable(meta) &&
+      parseMaxpTable(meta) &&
+      parseLocaTable(meta) &&
       parseGlyfTable(meta) &&
       parsePCLTTable(meta)) {
-    console.log(meta.ttf);
-    return JSON.stringify(meta.ttf, null, 2);
+    return [ JSON.stringify(meta.ttf, null, 2), meta.ttf.tables.cmap ];
   }
+}
+
+function lookup_cmap_glyph_sub(cmap, char_code)
+{
+  switch (cmap.format) {
+    case 4:
+      let i;
+      let length = cmap.startCode.length;
+      if (length != cmap.endCode.length) {
+        alert("cmap length mismatch startCode != endCode");
+        return null;
+      }
+      if (length != cmap.idRangeOffset.length) {
+        alert("cmap length mismatch startCode != idRangeOffset");
+        return null;
+      }
+      if (length != cmap.idDelta.length) {
+        alert("cmap length mismatch startCode != idDelta");
+        return null;
+      }
+      for (i=0; i<length; i++) {
+        if (cmap.startCode[i] <= char_code && char_code <= cmap.endCode[i]) {
+          break;
+	}
+      }
+      if (i == length) {
+        return null;
+      }
+      if (cmap.idRangeOffset[i] == 0) {
+        return cmap.idDelta[i] + char_code;
+      }
+      let index_offset = i + cmap.idRangeOffset[i] / 2 + (char_code - cmap.startCode[i]);
+      if (index_offset < cmap.idRangeOffset.length) {
+        return cmap.idRangeOffset[index_offset];
+      }
+      if (index_offset - length < cmap.glyphIdArray.length) {
+        return cmap.glyphIdArray[index_offset - length];
+      }
+      return null;
+      break;
+    case 6:
+      if (cmap.firstCode <= char_code && char_code < (cmap.firstCode + cmap.entryCount)) {
+        return cmap.glyphIdArray[char_code - cmap.firstCode];
+      }
+      return null;
+    default:
+      alert("Unhandled format: " + cmap.format);
+      break;
+
+  }
+}
+
+function lookup_cmap_glyph(cmap, char_code)
+{
+  let ret = null;
+  for (let i=0; i<cmap.subtables.length; i++) {
+    ret = lookup_cmap_glyph_sub(cmap.subtables[i], char_code);
+    if (ret != null) {
+      break;
+    }
+  }
+  return ret;
+}
+
+function build_glyph_index(cmap)
+{
+  let gis = { }
+  for (let i=0; i<65536; i++) {
+    let gi = lookup_cmap_glyph(cmap, i);
+    if (gi == null || gi == 0) {
+      continue;
+    }
+    gis[i] = gi;
+  }
+  return gis;
 }
 

@@ -15,3 +15,15 @@ for ease of use.  If you want to experiment you can run
 $ cd src; python3 -m http.server
 
 to run a non-amalgamated version to more easily view logic flow.
+
+For compiling the jq wasm see Robert Aboukhalil's jqkungfu project:
+
+https://github.com/robertaboukhalil/jqkungfu
+
+If compiling on a Windows/MSYS2 system see:
+
+https://github.com/SCI4THIS/jqkungfu-msys2
+
+Tesselation uses mapbox earcut.js which is available at:
+
+https://github.com/mapbox/earcut.js

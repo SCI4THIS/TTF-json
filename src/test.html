@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TTF-json-tests</title>
+<script src="poly.js">
+</script>
+<script>
+function set_status(id, stat)
+{
+  document.getElementById(id).innerHTML = stat;
+}
+
+function append_status(id, stat)
+{
+  document.getElementById(id).innerHTML += "<br />" + stat;
+}
+
+function test_segsect(p1,p2,p3,p4,type,x,y)
+{
+  let s1 = { p1: p1, p2: p2 };
+  let s2 = { p1: p3, p2: p4 };
+  let res = segsect(s1, s2);
+  console.log(res);
+  if (type != res.type) {
+    append_status("status", "fail");
+    return;
+  }
+  if (type == "N") {
+    append_status("status", "pass");
+    return;
+  }
+  if (type == "X") {
+    if (res.p.x == x && res.p.y == y) {
+      append_status("status", "pass");
+    } else {
+      append_status("status", "fail");
+    }
+    return;
+  }
+  if (type == "S") {
+    let p1 = x;
+    let p2 = y;
+    if ((p1.x == res.s.p1.x && p1.y == res.s.p1.y &&
+         p2.x == res.s.p2.x && p2.y == res.s.p2.y)
+        ||
+        (p2.x == res.s.p1.x && p2.y == res.s.p1.y &&
+         p1.x == res.s.p2.x && p1.y == res.s.p2.y)) {
+      append_status("status", "pass");
+    } else {
+      append_status("status", "fail");
+    }
+  }
+}
+
+function test_poly_inside(p,polyline,val_should_be)
+{
+  if (val_should_be == poly_point_inside(p, polyline)) {
+    append_status("status", "pass");
+  } else {
+    append_status("status", "fail");
+  }
+}
+
+function run()
+{
+  set_status("status", "Running...");
+  let p1 = { x: 0, y: 0 };
+  let p2 = { x: 1, y: 0 };
+  let p3 = { x: 0, y: 1 };
+  let p4 = { x: 1, y: 1 };
+  let p5 = { x: 2, y: 0 };
+  let p6 = { x: 3, y: 0 };
+  let p7 = { x: 0.5, y: 0.5 };
+  let p8 = { x: "184", y: "178" };
+  let p9 = { x: "304", y: "566" };
+  let polyline = [
+    { op: "M", pt: { x: 0, y: 0 } },
+    { op: "L", pt: { x: 1, y: 0 } },
+    { op: "L", pt: { x: 1, y: 1 } },
+    { op: "L", pt: { x: 0, y: 1 } }
+  ];
+  let polyline2 = [
+    { op: "M", pt: { x: 184, y: 178 } },
+    { op: "L", pt: { x: 128, y: 0   } },
+    { op: "L", pt: { x: 40,  y: 0   } },
+    { op: "L", pt: { x: 254, y: 655 } },
+    { op: "L", pt: { x: 361, y: 655 } },
+    { op: "L", pt: { x: 574, y: 0   } },
+    { op: "L", pt: { x: 483, y: 0   } },
+    { op: "L", pt: { x: 425, y: 178 } }
+  ];
+  let polyline3 = [
+    { op: "M", pt: { x: "304", y: "566" } },
+    { op: "L", pt: { x: "206", y: "248" } },
+    { op: "L", pt: { x: "404", y: "248" } }
+  ];
+  test_segsect(p1,p2,p1,p3,"X",0,0);
+  test_segsect(p1,p4,p2,p3,"X",0.5,0.5);
+  test_segsect(p1,p2,p5,p6,"N");
+  test_segsect(p1,p2,p2,p5,"X",1,0);
+  test_segsect(p1,p5,p2,p6,"S",p2,p5);
+  test_poly_inside(p7, polyline, true);
+  test_poly_inside(p5, polyline, false);
+  test_poly_inside(p8, polyline3, false);
+  test_poly_inside(p9, polyline2, true);
+  append_status("status", "Finished.");
+}
+</script>
+</head>
+<body>
+<input type="button" value="RUN" onclick="run()">
+</input>
+<div id="status">
+</div>
+</body>
+</html>

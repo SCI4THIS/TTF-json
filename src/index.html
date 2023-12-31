@@ -2,13 +2,33 @@
 <html>
 <head>
 <title>TTF-json</title>
+<script src="earcut.js">
+</script>
+<script src="poly.js">
+</script>
 <script src="ttf-json.js">
+</script>
+<script src="glfontsdev.js">
+</script>
+<script src="program.js">
+</script>
+<script src="prag.js">
+</script>
+<script src="vbo.js">
+</script>
+<script src="matrix.js">
 </script>
 <script>
 var fileReader = new FileReader();
 var filename;
 var ttf_json;
+var cmap;
 var ttf_jq_json;
+var svgs = [];
+var gl;
+var vbo_m;
+var prog;
+var prag;
 
 function set_status(id, stat)
 {
@@ -151,6 +171,7 @@ function convert_to_svg()
     let table_td_el = document.createElement("td");
     let svg = convert_to_svg_glyph(json, i);
     let svg_el = document.createElement("img");
+    svgs[i] = svg;
     svg_el.src = "data:image/svg+xml;base64," + btoa(svg);
     table_td_el.appendChild(svg_el);
     table_tr_el.appendChild(table_td_el);
@@ -158,10 +179,212 @@ function convert_to_svg()
   table_el.appendChild(table_tr_el);
 }
 
+function create_prog()
+{
+  let options = {
+    gl: gl,
+    src: { },
+    location_fx: {
+      coord: 'getAttribLocation',
+      texCoord: 'getAttribLocation',
+      caM: 'getUniformLocation'
+    },
+    enable_fx: {
+      coord: 'enableVertexAttribArray',
+      texCoord: 'enableVertexAttribArray',
+    }
+  }
+  options.src[gl.VERTEX_SHADER] = `
+precision highp float;
+attribute vec2  coord;
+attribute vec2  texCoord;
+varying   vec2  st;
+varying   vec2  colorCoord;
+uniform   mat4  caM;
+
+void main() {
+  st = texCoord;
+  gl_Position = caM * vec4(coord.x, coord.y, 0.0, 1.0);
+  colorCoord = vec2(1.0 + gl_Position.x / 2.0, 1.0 + gl_Position.y / 2.0);
+}
+`;
+
+  options.src[gl.FRAGMENT_SHADER] = `
+precision highp float;
+varying vec2 st;
+varying vec2 colorCoord;
+void main() {
+  float flip  = 0.0;
+  float s     = st.x;
+  float t     = st.y;
+  float alpha = 1.0;
+  if (t < 0.0) {
+    flip = 1.0;
+    t    = -t;
+  }
+  if (1.0 - (s * s) < t) {
+    alpha = flip;
+  } else {
+    alpha = 1.0 - flip;
+  }
+  if (alpha == 1.0) {
+    gl_FragColor = vec4(0.5 * colorCoord.x, colorCoord.y - colorCoord.x, 1.0 * colorCoord.y, alpha);
+  } else {
+    discard;
+  }
+}
+`;
+  return Program(options);
+}
+
+function create_prag(vbo, caM_data)
+{
+  return Prag({
+    gl: gl,
+    vars: {
+      coord: [ 'vertexAttribPointer', 2, gl.FLOAT, false, 4 * 4, 0 ],
+      texCoord: [ 'vertexAttribPointer', 2, gl.FLOAT, false, 4 * 4, 2 * 4 ],
+      caM: [ 'uniformMatrix4fv', false, caM_data ]
+    },
+    vbo: {
+      coord: vbo,
+      texCoord: vbo
+    }
+  });
+}
+
+function draw(arg)
+{
+  let idx = lookup_cmap_glyph(cmap, arg.charCode);
+  let tab = arg.glf.lookup[idx];
+  arg.vao.bind(arg.gl.ELEMENT_ARRAY_BUFFER);
+  const ext = gl.getExtension("OES_element_index_uint");
+  let start = tab.start;
+  let len = tab.len;
+  arg.gl.drawElements(arg.gl.TRIANGLES, len, arg.gl.UNSIGNED_INT, 4 * start);
+}
+
+function draw2(arg)
+{
+  let idx = lookup_cmap_glyph(cmap, arg.charCode);
+  let tab = arg.glf.lookup[idx];
+  const ext = gl.getExtension("OES_element_index_uint");
+  let start = tab.start;
+  let len = tab.len;
+  arg.vao2.bind(arg.gl.ELEMENT_ARRAY_BUFFER);
+  start = 2 * tab.start;
+  len = 2 * tab.len;
+  arg.gl.drawElements(arg.gl.LINES, len, arg.gl.UNSIGNED_INT, 4 * start);
+}
+
+function convert_vao_for_lines(vao)
+{
+  let vao2_m = matrix(Uint32Array, 1, vao.m._m * 2);
+  let i = 0;
+  let j = 0;
+  while (i<vao.m._m) {
+    vao2_m.set(0, j++, vao.m.get(0, i+0));
+    vao2_m.set(0, j++, vao.m.get(0, i+1));
+    vao2_m.set(0, j++, vao.m.get(0, i+1));
+    vao2_m.set(0, j++, vao.m.get(0, i+2));
+    vao2_m.set(0, j++, vao.m.get(0, i+2));
+    vao2_m.set(0, j++, vao.m.get(0, i+0));
+    i+=3;
+  }
+  return VBO({gl: vao.gl, m: vao2_m });
+}
+
+function draw_canvas()
+{
+  let options = { alpha: true };
+  let el = document.getElementById("canvas");
+  try { gl = el.getContext("webgl", options) } catch (e) { }
+  try { gl = gl || canvas.getContext("experimental-webgl", options); } catch(e) { }
+  if (gl == null) {
+    console.log("couldn't create GL instance");
+    return;
+  }
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT);
+  let ttf_j = JSON.parse(ttf_json);
+  let xmin = ttf_j.tables.head.xMin;
+  let ymin = ttf_j.tables.head.yMin;
+  let xmax = ttf_j.tables.head.xMax;
+  let ymax = ttf_j.tables.head.yMax;
+  let xscale = xmax - xmin;
+  let yscale = ymax - ymin;
+  let scale  = 1 / xscale;
+  if (yscale > xscale) {
+    scale = 1 / yscale;
+  }
+
+  let m_T = Matrix(Float32Array, 4, 4, [ 1, 0, 0, 0,
+                                         0, 1, 0, 0,
+                                         0, 0, 1,     0,
+                                         -xmin, -ymin, 0,     1 ]);
+
+  let m_S = Matrix(Float32Array, 4, 4, [ scale,     0, 0, 0,
+                                             0, scale, 0, 0,
+                                             0,     0, 1, 0,
+                                             0,     0, 0, 1 ]);
+
+  let m_ST = matrix(Float32Array, 4, 4);
+  m_ST.mul(m_S, m_T);
+  let caM = matrix(Float32Array, 4, 4);
+  caM.mul(m_S, m_T);
+  vbo_m = Matrix(Float32Array, 4, glf.pts.length / 4, glf.pts);
+  let vbo = VBO({ gl: gl, m: vbo_m});
+  vao_m = Matrix(Uint32Array, 1, glf.idx.length, glf.idx);
+  let vao = VBO({ gl: gl, m: vao_m});
+  let vao2 = convert_vao_for_lines(vao);
+  prog = create_prog();
+  prag = create_prag(vbo, caM._data);
+  let s = "GLFonts";
+  for (let i=0; i<s.length; i++) {
+    let scale2 = 2 / (s.length);
+    let m_T2 = Matrix(Float32Array, 4, 4, [ 1, 0, 0, 0,
+                                            0, 1, 0, 0,
+                                            0, 0, 1,     0,
+                                            -1.0 + 0.9*(scale2 * i), -0.5, 0,   1 ]);
+
+    let m_S2 = Matrix(Float32Array, 4, 4, [ 2*scale2,     0, 0, 0,
+                                                0, 2*scale2, 0, 0,
+                                                0,     0, 1, 0,
+                                                0,     0, 0, 1 ]);
+    let m_ST2 = matrix(Float32Array, 4, 4);
+    m_ST2.mul(m_T2, m_S2);
+    caM.mul(m_ST2, m_ST);
+    prag.run(prog, draw, { gl, vao, vao2, glf, charCode: s.charCodeAt(i) });
+    m_T2.set(1, 3, 0);
+    m_ST2.mul(m_T2, m_S2);
+    caM.mul(m_ST2, m_ST);
+    prag.run(prog, draw2, { gl, vao, vao2, glf, charCode: s.charCodeAt(i) });
+  }
+
+}
+
+function tesselate_svg()
+{
+  let tess = [ ];
+  for (let i=0; i<svgs.length; i++) {
+    let polylines = polylines_from_svg(svgs[i])
+    if (polylines == null) {
+      tess[i] = null;
+      continue;
+    }
+    let polygons = polygons_from_polylines(polylines);
+    tess[i] = polygons_tessellate(polygons);
+  }
+  glf = glfontsdev_compile(tess);
+  console.log({glf});
+  draw_canvas();
+}
+
 function display_svg()
 {
     convert_to_svg();
     append_status("status3", "Generated SVG.");
+    setTimeout(tesselate_svg, 0);
 }
 
 function jqconvert()
@@ -177,7 +400,9 @@ function jqconvert()
 function parseFile()
 {
     meta = { offset: 0, readbuf: new Uint8Array(fileReader.result), ttf: { } };
-    ttf_json = parse(meta);
+    let res = parse(meta);
+    ttf_json = res[0];
+    cmap = res[1];
     window.document.getElementById("download1").style.display = "block";
     window.document.getElementById("input").innerHTML = ttf_json;
     append_status("status", "Parsed file.");
@@ -219,20 +444,23 @@ Waiting for file.
 <div id="status3">
 </div>
 
+<canvas id="canvas" width=800 height=800>
+</canvas>
+
 <table id="glyphs" border="1px">
 </table>
 
-<div id="ttf-json-zip" style="visibility: hidden">
+<div id="ttf-json-zip" style="display: none">
 </div>
 
 <div id="error" style="color:red">
 </div>
 
-<div id="input" style="visibility: hidden">
+<div id="input" style="display: none">
 </div>
 
-<div id="query" style="visibility: hidden">
-def unroll_flags: .flags | 
+<div id="query" style="display: none">
+def unroll_flags: .flags |
     map(  if .REPEAT_FLAG
           then (. as $flag | range(.repeat_count + 1) | $flag)
           else . end
@@ -255,7 +483,7 @@ def build_intermediate_1: { contour_map: (. | build_contour_map),
 ################################################################################
 
 def build_coordinate_index:
- [ 
+ [
   map(  if(.X_SHORT_VECTOR)
         then 1
         else
@@ -292,11 +520,11 @@ def avg: [((.[0][0] + .[1][0]) / 2), ((.[0][1] + .[1][1]) / 2)];
 
 def decompress_simple_glyf:
   build_intermediate_1 |
-  build_intermediate_2 as $i | 
+  build_intermediate_2 as $i |
   [range(($i.coordinate_index[0] | length))] |
   map([$i.lookup_xy.x[$i.coordinate_index[0][.]],
        $i.lookup_xy.y[$i.coordinate_index[1][.]]]) as $coords |
-  $i.contour_map | 
+  $i.contour_map |
   {
     contour_coords: map($coords[.[0]:.[1]]),
     contour_on_curve_map:
@@ -316,11 +544,11 @@ def decompress_simple_glyf:
           then { xy: $i2.contour_coords[$j][.],
                  on_curve: $i2.contour_on_curve_map[$j][.+1] }
           else { xy: ( [$i2.contour_coords[$j][.[0]],
-                        $i2.contour_coords[$j][.[1]]] | avg), 
+                        $i2.contour_coords[$j][.[1]]] | avg),
                  on_curve: true }
           end)
       );
-                            
+
 
 .tables.glyf | map(if (type=="object")
                    then
@@ -331,7 +559,7 @@ def decompress_simple_glyf:
                    else null end)
 </div>
 
-<div id="output" style="visibility: hidden">
+<div id="output" style="display: none">
 </div>
 
 
@@ -405,7 +633,7 @@ function launch()
 }
 
 // On page load
-document.addEventListener("DOMContentLoaded", 
+document.addEventListener("DOMContentLoaded",
 function()
 {
   // Launch jq when click button

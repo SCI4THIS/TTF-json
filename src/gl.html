@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>GL</title>
+<script src="matrix.js">
+</script>
+<script src="program.js">
+</script>
+<script src="prag.js">
+</script>
+<script src="vbo.js">
+</script>
+<script>
+var gl;
+
+function create_prog()
+{
+  let options = {
+    gl: gl,
+    src: { },
+    location_fx: {
+      coord: 'getAttribLocation'
+    },
+    enable_fx: {
+      coord: 'enableVertexAttribArray'
+    }
+  }
+  options.src[gl.VERTEX_SHADER] = `
+precision highp float;
+attribute vec2  coord;
+
+void main() {
+  gl_Position = vec4(coord.x, coord.y, 0, 1);
+}
+`;
+
+  options.src[gl.FRAGMENT_SHADER] = `
+void main() {
+  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+`
+  return Program(options);
+}
+
+function create_prag()
+{
+  let coord_m   = Matrix(Float32Array, 2, 3, [ -0.5, -0.5, 0.5, -0.5, -0.5, 0.5 ]);
+  coord_m.print();
+  let coord_vbo = VBO({ gl: gl, m: coord_m });
+  return Prag({
+    gl: gl,
+    vars: {
+      coord: [ 'vertexAttribPointer', 2, gl.FLOAT, false, 2 * 4, 0 ]
+    },
+    vbo: {
+      coord: coord_vbo
+    }
+  });
+}
+
+function draw(arg)
+{
+  arg.vbi.bind(arg.gl.ELEMENT_ARRAY_BUFFER);
+  arg.gl.drawElements(arg.gl.TRIANGLES, 3, arg.gl.UNSIGNED_BYTE, 0);
+}
+
+function start()
+{
+  let options = { alpha: true };
+  let el = document.getElementById("canvas");
+  console.log(el);
+  try { gl = el.getContext("webgl", options) } catch (e) { }
+  try { gl = gl || canvas.getContext("experimental-webgl", options); } catch(e) { }
+  if (gl == null) {
+    console.log("couldn't create GL instance");
+    return;
+  }
+  gl.clearColor(0.5, 0.5, 0.5, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT);
+  let prog = create_prog();
+  let prag = create_prag();
+  let vbi  = VBO({ gl: gl, m: Matrix(Int8Array, 1, 3, [0, 1, 2])});
+  prag.run(prog, draw, { gl, vbi });
+  
+}
+</script>
+</head>
+<body onload="start()">
+<canvas width=800 height=600 id="canvas">
+</canvas>
+</body>
+</html>
