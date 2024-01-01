@@ -113,6 +113,9 @@ function convert_to_svg_glyph_sub(glyph_jsons, idx, ABCDEF)
 {
   let svg = "";
   let glyph_json = glyph_jsons[idx];
+  if (glyph_json == null) {
+    return null;
+  }
   if (!Array.isArray(glyph_json)) {
     /* composite glyph */
     let subglyfs = glyph_json.subglyfs;

@@ -11,11 +11,18 @@ function consolidate_spaces(s)
 /* Triangle area computed by Heron's formula */
 function tri_area(p1, p2, p3)
 {
+/*
   let a = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
   let b = Math.sqrt(Math.pow(p3.x - p2.x, 2) + Math.pow(p3.y - p2.y, 2));
   let c = Math.sqrt(Math.pow(p1.x - p3.x, 2) + Math.pow(p1.y - p3.y, 2));
   let s = (a + b + c) / 2;
   return Math.sqrt(s * (s  - a) * (s - b) * (s - c));
+*/
+/* Magic from https://byjus.com/maths/collinear-points */
+  let a = p1.x * (p2.y - p3.y);
+  let b = p2.x * (p3.y - p1.y);
+  let c = p3.x * (p1.y - p2.y);
+  return 0.5 * Math.abs(a + b + c);
 }
 
 /* Line segment is 2x 2d points { p1: {x,y}, p2: {x,y}}
@@ -319,6 +326,7 @@ function poly_approx_Q(polyline, p0, p1, p2, is_outer)
     default:
       console.log({p0, p1, p2, testPt, delta});
       console.log(res);
+      console.log("Error approx Q -- 1");
       alert("Error approx Q -- 1");
       return;
   }
@@ -337,6 +345,7 @@ function poly_approx_Q(polyline, p0, p1, p2, is_outer)
     default:
       console.log({p0, p1, p2, testPt, delta});
       console.log(res);
+      console.log("Error approx Q -- 2");
       alert("Error approx Q -- 2");
       return;
   }
@@ -447,7 +456,7 @@ function polylines_from_svg(svg_s)
   }
   let d = consolidate_spaces(path.attributes.d.nodeValue.replace(/M/g, " M ").replace(/L/g, " L ").replace(/Q/g, " Q ").trim()).split(" ");
   if (d[0] != "M") {
-    alert("Unsupported SVG format: expecting M first");
+    console.log("Unsupported SVG format: expecting M first");
     return null;
   }
   let polylines = [];

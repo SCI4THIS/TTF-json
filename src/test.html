@@ -15,6 +15,18 @@ function append_status(id, stat)
   document.getElementById(id).innerHTML += "<br />" + stat;
 }
 
+function test_tri_area(p1,p2,p3,value)
+{
+  let area = tri_area(p1, p2, p3);
+  console.log(area);
+  if (value == area) {
+    append_status("status", "pass");
+  } else {
+    append_status("status", "fail");
+  }
+  return;
+}
+
 function test_segsect(p1,p2,p3,p4,type,x,y)
 {
   let s1 = { p1: p1, p2: p2 };
@@ -64,15 +76,18 @@ function test_poly_inside(p,polyline,val_should_be)
 function run()
 {
   set_status("status", "Running...");
-  let p1 = { x: 0, y: 0 };
-  let p2 = { x: 1, y: 0 };
-  let p3 = { x: 0, y: 1 };
-  let p4 = { x: 1, y: 1 };
-  let p5 = { x: 2, y: 0 };
-  let p6 = { x: 3, y: 0 };
-  let p7 = { x: 0.5, y: 0.5 };
-  let p8 = { x: "184", y: "178" };
-  let p9 = { x: "304", y: "566" };
+  let p1  = { x: 0, y: 0 };
+  let p2  = { x: 1, y: 0 };
+  let p3  = { x: 0, y: 1 };
+  let p4  = { x: 1, y: 1 };
+  let p5  = { x: 2, y: 0 };
+  let p6  = { x: 3, y: 0 };
+  let p7  = { x: 0.5, y: 0.5 };
+  let p8  = { x: "184", y: "178" };
+  let p9  = { x: "304", y: "566" };
+  let p10 = { x: 142, y: 506 };
+  let p11 = { x: 129, y: 519 };
+  let p12 = { x: 115.5, y: 532.5 };
   let polyline = [
     { op: "M", pt: { x: 0, y: 0 } },
     { op: "L", pt: { x: 1, y: 0 } },
@@ -103,6 +118,7 @@ function run()
   test_poly_inside(p5, polyline, false);
   test_poly_inside(p8, polyline3, false);
   test_poly_inside(p9, polyline2, true);
+  test_tri_area(p10, p11, p12, 0.0);
   append_status("status", "Finished.");
 }
 </script>

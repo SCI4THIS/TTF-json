@@ -244,8 +244,24 @@ alert("Unfinished format 2 subHeaders / glyhphIndexArray");
                   glyphIdArray });
         break;
       }
+      case 12: {
+        let reserved  = READINT(2, rsum, meta);
+        let length    = READINT(4, rsum, meta);
+        let language  = READINT(4, rsum, meta);
+        let numGroups = READINT(4, rsum, meta);
+        let groups    = [];
+        for (let j=0; j<numGroups; j++) {
+          let startCharCode = READINT(4, rsum, meta);
+          let endCharCode   = READINT(4, rsum, meta);
+          let startGlyphID  = READINT(4, rsum, meta);
+          groups[j] = { startCharCode, endCharCode, startGlyphID };
+	}
+        subtables[i] = Object.assign(subtables[i],
+                { reserved, length, language, numGroups, groups });
+        break;
+      }
       default:
-        alert("Unhandled format " + format);
+        alert("(Parse) Unhandled format " + format);
         return false;
     }
   }
@@ -653,7 +669,7 @@ function lookup_cmap_glyph_sub(cmap, char_code)
       }
       return null;
     default:
-      alert("Unhandled format: " + cmap.format);
+      alert("(Lookup) Unhandled format: " + cmap.format);
       break;
 
   }
