@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 /* base64 stuff https://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c */
 

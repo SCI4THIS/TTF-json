@@ -526,8 +526,8 @@ function parseCompoundGlyf(i, glyf, meta)
 function parseGlyf(i, glyf, meta)
 {
   let offset = meta.ttf.tables.loca.offsets[i];
-  if (offset < 0 || offset >= meta.tables['glyf'].length) {
-    alert("out of bounds loca[" + i + "] offset: " + offset);
+  if (offset < 0 || offset > meta.tables['glyf'].length) {
+    alert("out of bounds loca[" + i + "] offset: " + offset + "(glyf.length: " + meta.tables['glyf'].length + ")");
     return false;
   }
   if (offset == meta.ttf.tables.loca.offsets[i+1]) {
