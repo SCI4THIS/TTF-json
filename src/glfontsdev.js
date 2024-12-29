@@ -61,7 +61,7 @@ function glfontsdev_compile(tess_array)
   let off2 = 0;
   for (let i=0; i<glf_array.length; i++) {
     if (glf_array[i] == null) {
-      lookup[i] = null;
+      lookup[i] = { start: -1, len: 0 };
       continue;
     }
     for (let j=0; j<glf_array[i].idx.length; j++) {

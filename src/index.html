@@ -29,6 +29,7 @@ var gl;
 var vbo_m;
 var prog;
 var prag;
+var font;
 
 function set_status(id, stat)
 {
@@ -53,12 +54,12 @@ function downloadURI(uri, name)
 
 function download1()
 {
+  /* OPENSAYSME: ttf_json = JSON.stringify(glf, null, 2); */
   const str = ttf_json.toString();
   const bytes = new TextEncoder().encode(str);
   const blob = new Blob([bytes], { type: "application/json;charset=utf-8" });
   let url = URL.createObjectURL(blob);
   let dl_filename = filename + ".json.txt";
-
   downloadURI(url, dl_filename);
 }
 
@@ -258,7 +259,7 @@ function create_prag(vbo, caM_data)
 
 function draw(arg)
 {
-  let idx = lookup_cmap_glyph(cmap, arg.charCode);
+  let idx = arg.glf.cmap_lookup[arg.charCode];
   let tab = arg.glf.lookup[idx];
   arg.vao.bind(arg.gl.ELEMENT_ARRAY_BUFFER);
   const ext = gl.getExtension("OES_element_index_uint");
@@ -269,7 +270,7 @@ function draw(arg)
 
 function draw2(arg)
 {
-  let idx = lookup_cmap_glyph(cmap, arg.charCode);
+  let idx = arg.glf.cmap_lookup[arg.charCode];
   let tab = arg.glf.lookup[idx];
   const ext = gl.getExtension("OES_element_index_uint");
   let start = tab.start;
@@ -379,7 +380,7 @@ function tesselate_svg()
     tess[i] = polygons_tessellate(polygons);
   }
   glf = glfontsdev_compile(tess);
-  console.log({glf});
+  glf.cmap_lookup = build_glyph_index(cmap);
   draw_canvas();
 }
 
