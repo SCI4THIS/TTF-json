@@ -1,6 +1,6 @@
-Parse TTF / OTF font files and export to JSON.
+Parse TTF font files, export to JSON, convert to polygons with Webassembly port of jq-lang, tesselate and render to WebGL.
 
-index.html is the entirity.  
+index.html is the entirety.  
 
 Preview / use here
 
