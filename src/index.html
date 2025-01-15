@@ -123,7 +123,7 @@ function convert_to_svg_glyph_sub(glyph_jsons, idx, ABCDEF)
     for (let i=0; i<subglyfs.length; i++) {
       subglyf = subglyfs[i];
       if (!subglyf.ARGS_ARE_XY_VALUES) {
-        alert("!ARGS_ARE_XY_VALUES Unsupported");
+        console.error("!ARGS_ARE_XY_VALUES Unsupported");
       }
 /* a b e     A B E    (Aa + Cb) (Ba + Db) (Ea + Fb + e)
  * c d f  x  C D F  = (Ac + Cd) (Bc + Dd) (Ec + Fd + f)
@@ -427,7 +427,7 @@ function readFile(input)
   }
 
   fileReader.onerror = function() {
-    alert(fileReader.error);
+    console.error(fileReader.error);
   }
 
 }

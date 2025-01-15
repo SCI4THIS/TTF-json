@@ -85,7 +85,7 @@ function parseTables(meta)
       continue;
 
     if (calculated != checksum) {
-      alert("Bad checksum for " + tag + " " + calculated + " != " + checksum);
+      console.error("Bad checksum for " + tag + " " + calculated + " != " + checksum);
       return false;
     }
   }
@@ -120,7 +120,7 @@ function parseHeadTable(meta)
   console.log("xMin: " + xMin + ", yMin: " + yMin);
 
   if (magicNumber != 0x5F0F3CF5) {
-    alert("Bad magicNumber " + magicNumber + " != " + 0x5F0F3CF5);
+    console.error("Bad magicNumber " + magicNumber + " != " + 0x5F0F3CF5);
     return false;
   }
 
@@ -130,12 +130,12 @@ function parseHeadTable(meta)
 
   meta.tables['head'].adjustedChecksum = (meta.tables['head'].checksum + checksumAdjustment) % 4294967296;
   if (meta.tables['head'].adjustedChecksum != meta.tables['head'].calculated) {
-    alert("Bad checksum for head " + meta.tables['head'].adjustedChecksum + " != " + meta.tables['head'].calculated);
+    console.error("Bad checksum for head " + meta.tables['head'].adjustedChecksum + " != " + meta.tables['head'].calculated);
     return false;
   }
 
   if (indexToLocFormat != 0 && indexToLocFormat != 1) {
-    alert("Invalid indexToLocFormat (must be 0 or 1) " + indexToLocFormat);
+    console.error("Invalid indexToLocFormat (must be 0 or 1) " + indexToLocFormat);
     return false;
   }
 
@@ -188,7 +188,7 @@ function parseCmapTable(meta)
           let k             = subHeaderKeys[j] / 8;
           k_max             = Math.max(k_max, k);
         }
-alert("Unfinished format 2 subHeaders / glyhphIndexArray");
+console.error("Unfinished format 2 subHeaders / glyhphIndexArray");
         return false;
         break;
       }
@@ -206,7 +206,7 @@ alert("Unfinished format 2 subHeaders / glyhphIndexArray");
         }
         let reservedPad     = READINT(2, rsum, meta);
         if (reservedPad != 0) {
-          alert("reservedPad not zero (" + reservedPad + ")");
+          console.error("reservedPad not zero (" + reservedPad + ")");
           return false;
         }
         let startCode       = [];
@@ -261,7 +261,7 @@ alert("Unfinished format 2 subHeaders / glyhphIndexArray");
         break;
       }
       default:
-        alert("(Parse) Unhandled format " + format);
+        console.error("(Parse) Unhandled format " + format);
         return false;
     }
   }
@@ -285,7 +285,7 @@ function parseMaxpTable(meta)
   }
 
   if (format != 0x10000) {
-    alert("Unhandled maxp format: " + format);
+    console.error("Unhandled maxp format: " + format);
     return false;
   }
 
@@ -320,7 +320,7 @@ function parseLocaTable(meta)
   let offsets = [];
   if (meta.indexToLocFormat == 0) {
     if (meta.tables['loca'].length != 2 * (meta.numGlyphs + 1)) {
-      alert("Invalid size for loca table " + meta.tables['loca'].length + " != " + (2 * (meta.numGlyphs + 1)));
+      console.error("Invalid size for loca table " + meta.tables['loca'].length + " != " + (2 * (meta.numGlyphs + 1)));
       return false;
     }
     for (let i=0; i<meta.numGlyphs + 1; i++) {
@@ -329,7 +329,7 @@ function parseLocaTable(meta)
   }
   if (meta.indexToLocFormat == 1) {
     if (meta.tables['loca'].length != 4 * (meta.numGlyphs + 1)) {
-      alert("Invalid size for loca table " + meta.tables['loca'].length + " != " + (4 * (meta.numGlyphs + 1)));
+      console.error("Invalid size for loca table " + meta.tables['loca'].length + " != " + (4 * (meta.numGlyphs + 1)));
       return false;
     }
     for (let i=0; i<meta.numGlyphs + 1; i++) {
@@ -527,7 +527,7 @@ function parseGlyf(i, glyf, meta)
 {
   let offset = meta.ttf.tables.loca.offsets[i];
   if (offset < 0 || offset > meta.tables['glyf'].length) {
-    alert("out of bounds loca[" + i + "] offset: " + offset + "(glyf.length: " + meta.tables['glyf'].length + ")");
+    console.error("out of bounds loca[" + i + "] offset: " + offset + "(glyf.length: " + meta.tables['glyf'].length + ")");
     return false;
   }
   if (offset == meta.ttf.tables.loca.offsets[i+1]) {
@@ -632,15 +632,15 @@ function lookup_cmap_glyph_sub(cmap, char_code)
       let i;
       let length = cmap.startCode.length;
       if (length != cmap.endCode.length) {
-        alert("cmap length mismatch startCode != endCode");
+        console.error("cmap length mismatch startCode != endCode");
         return null;
       }
       if (length != cmap.idRangeOffset.length) {
-        alert("cmap length mismatch startCode != idRangeOffset");
+        console.error("cmap length mismatch startCode != idRangeOffset");
         return null;
       }
       if (length != cmap.idDelta.length) {
-        alert("cmap length mismatch startCode != idDelta");
+        console.error("cmap length mismatch startCode != idDelta");
         return null;
       }
       for (i=0; i<length; i++) {
@@ -669,7 +669,7 @@ function lookup_cmap_glyph_sub(cmap, char_code)
       }
       return null;
     default:
-      alert("(Lookup) Unhandled format: " + cmap.format);
+      console.error("(Lookup) Unhandled format: " + cmap.format);
       break;
 
   }

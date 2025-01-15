@@ -147,7 +147,7 @@ function poly_approx(polyline, approx_fn)
         approx = approx.concat([polyline[i].pt.x, polyline[i].pt.y])
         break;
       default:
-        alert("Unhandled path op: " + polyline[i]);
+        console.error("Unhandled path op: " + polyline[i]);
         break;
     }
   }
@@ -327,7 +327,7 @@ function poly_approx_Q(polyline, p0, p1, p2, is_outer)
       console.log({p0, p1, p2, testPt, delta});
       console.log(res);
       console.log("Error approx Q -- 1");
-      alert("Error approx Q -- 1");
+      console.error("Error approx Q -- 1");
       return;
   }
 
@@ -346,7 +346,7 @@ function poly_approx_Q(polyline, p0, p1, p2, is_outer)
       console.log({p0, p1, p2, testPt, delta});
       console.log(res);
       console.log("Error approx Q -- 2");
-      alert("Error approx Q -- 2");
+      console.error("Error approx Q -- 2");
       return;
   }
 
@@ -400,7 +400,7 @@ function polyline_prepare_tess(polyline, is_outer)
          bezfills = bezfills.concat(res.bezfill);
          break;
       default:
-        alert("Unhandled op: " + polygon.outer[i].op);
+        console.error("Unhandled op: " + polygon.outer[i].op);
     }
   }
   return { pts, bezfills };
@@ -442,7 +442,7 @@ function polylines_from_svg(svg_s)
         path_idx = i;
         continue;
       }
-      alert("Unsupported SVG format: Only 1 path element supported.");
+      console.error("Unsupported SVG format: Only 1 path element supported.");
       return null;
     }
   }
@@ -451,7 +451,7 @@ function polylines_from_svg(svg_s)
     return null;
   }
   if (path.attributes.d == undefined) {
-    alert("Unsupported SVG format: expecting d attribute.");
+    console.error("Unsupported SVG format: expecting d attribute.");
     return null;
   }
   let d = consolidate_spaces(path.attributes.d.nodeValue.replace(/M/g, " M ").replace(/L/g, " L ").replace(/Q/g, " Q ").trim()).split(" ");
@@ -482,7 +482,7 @@ function polylines_from_svg(svg_s)
     if (d[i] == "Z") {
       break;
     }
-    alert("Unsupported SVG format: Unhandled op: " + d[i]);
+    console.error("Unsupported SVG format: Unhandled op: " + d[i]);
     return null;
   }
   return polylines;
