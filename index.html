@@ -1397,7 +1397,15 @@ console.error("Unfinished format 2 subHeaders / glyhphIndexArray");
           idRangeOffset[j]  = READINT(2, rsum, meta);
         }
         let glyphIdArray = [];
-        for (let j=0; meta.offset < subtables[i].offset + length; j++) {
+	/*
+	Many fonts utilize a glyphIdArray that spills over into subsequent subtables.
+	In order to accomodate this, instead of
+
+            for (let j=0; meta.offset < subtables[i].offset + length; j++) {
+
+	the loop will run glyphIdArray until the end of the cmap table
+        */
+        for (let j=0; meta.offset < meta.tables.cmap.offset + meta.tables.cmap.length; j++) {
           glyphIdArray[j] = READINT(2, rsum, meta);
         }
         subtables[i]         = Object.assign(subtables[i], { format, length, language, segCountX2, searchRange,
@@ -1836,6 +1844,7 @@ function lookup_cmap_glyph_sub(cmap, char_code)
       if (index_offset - length < cmap.glyphIdArray.length) {
         return cmap.glyphIdArray[index_offset - length];
       }
+      console.log("dropping index_offset: " + index_offset + "length: " + length );
       return null;
       break;
     case 6:
@@ -2652,6 +2661,7 @@ function convert_to_svg()
     let svg_el = document.createElement("img");
     svgs[i] = svg;
     svg_el.src = "data:image/svg+xml;base64," + btoa(svg);
+    table_td_el.id = "glyph" + i;
     table_td_el.appendChild(svg_el);
     table_tr_el.appendChild(table_td_el);
   }
@@ -2730,6 +2740,17 @@ function create_prag(vbo, caM_data)
       texCoord: vbo
     }
   });
+}
+
+function reverse_cmap(cmap_lookup)
+{
+  let ks = Object.keys(cmap_lookup);
+  let rev = { };
+  for (let i=0; i<ks.length; i++) {
+    let k = ks[i];
+    rev[cmap_lookup[k]] = k;
+  }
+  return rev;
 }
 
 function draw(arg)
@@ -2856,6 +2877,19 @@ function tesselate_svg()
   }
   glf = glfontsdev_compile(tess);
   glf.cmap_lookup = build_glyph_index(cmap);
+  let rev_cmap = reverse_cmap(glf.cmap_lookup);
+  for (let i=0; i<svgs.length; i++) {
+    let id = "glyph" + i;
+    let el = document.getElementById(id);
+    let te = document.createElement("p");
+    let c = rev_cmap[i];
+    if (c != undefined) {
+      te.innerText = "U+" + Number(rev_cmap[i]).toString(16).padStart(4, '0');
+    } else {
+      te.innerText = "";
+    }
+    el.prepend(te);
+  }
   draw_canvas();
 }
 

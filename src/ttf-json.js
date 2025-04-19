@@ -222,7 +222,15 @@ console.error("Unfinished format 2 subHeaders / glyhphIndexArray");
           idRangeOffset[j]  = READINT(2, rsum, meta);
         }
         let glyphIdArray = [];
-        for (let j=0; meta.offset < subtables[i].offset + length; j++) {
+	/*
+	Many fonts utilize a glyphIdArray that spills over into subsequent subtables.
+	In order to accomodate this, instead of
+
+            for (let j=0; meta.offset < subtables[i].offset + length; j++) {
+
+	the loop will run glyphIdArray until the end of the cmap table
+        */
+        for (let j=0; meta.offset < meta.tables.cmap.offset + meta.tables.cmap.length; j++) {
           glyphIdArray[j] = READINT(2, rsum, meta);
         }
         subtables[i]         = Object.assign(subtables[i], { format, length, language, segCountX2, searchRange,
@@ -661,6 +669,7 @@ function lookup_cmap_glyph_sub(cmap, char_code)
       if (index_offset - length < cmap.glyphIdArray.length) {
         return cmap.glyphIdArray[index_offset - length];
       }
+      console.log("dropping index_offset: " + index_offset + "length: " + length );
       return null;
       break;
     case 6:
